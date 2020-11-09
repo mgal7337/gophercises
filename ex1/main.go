@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 )
 
 var filepath string
@@ -14,23 +16,22 @@ func main() {
 	flag.StringVar(&filepath, "path", "./ex1/questions.csv", "path to csv with questions")
 	flag.Parse()
 
+	timeout := 5 * time.Second
+
 	excercises, err := loadQuestionsFromCSVFile(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var userAnswer string
-
 	for i, v := range excercises {
-		question := v[0]
-		answer := v[1]
-
-		fmt.Printf("Quetions %d\n%s=", i+1, question)
-		fmt.Scanln(&userAnswer)
-		if userAnswer == answer {
-			fmt.Printf("\nCorrect!\n")
-		} else {
-			fmt.Printf("\nIncorrect! Correct answer -> %s\n", answer)
+		questionPrinter(v[0], i+1)
+		userAnswerChan := make(chan string)
+		go getUserAnswer(userAnswerChan)
+		select {
+		case ans := <-userAnswerChan:
+			handleAnswer(v[1], ans)
+		case <-time.After(timeout):
+			fmt.Println("Timeout!")
 		}
 	}
 }
@@ -46,4 +47,22 @@ func loadQuestionsFromCSVFile(path string) ([][]string, error) {
 		return nil, err
 	}
 	return records, nil
+}
+
+func getUserAnswer(ret chan<- string) {
+	var answer string
+	fmt.Scanln(&answer)
+	ret <- strings.TrimSpace(strings.ToLower(answer))
+}
+
+func questionPrinter(question string, number int) {
+	fmt.Printf("#%d: Next question: %s= ? ", number, question)
+}
+
+func handleAnswer(correct, provided string) {
+	if correct != provided {
+		fmt.Printf("Wrong answer!\nProvided: %s, Expected: %s\n", provided, correct)
+	} else {
+		fmt.Println("Correct!")
+	}
 }
