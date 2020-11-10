@@ -14,14 +14,15 @@ var filepath string
 
 func main() {
 	flag.StringVar(&filepath, "path", "./ex1/questions.csv", "path to csv with questions")
+	timeoutVal := flag.Int("time", 5, "time to answer")
 	flag.Parse()
-
-	timeout := 5 * time.Second
 
 	excercises, err := loadQuestionsFromCSVFile(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	timeout := time.Duration(*timeoutVal) * time.Second
 
 	for i, v := range excercises {
 		questionPrinter(v[0], i+1)
